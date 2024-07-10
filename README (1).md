@@ -8,17 +8,23 @@ The `DegenToken` smart contract is based on the ERC20 standard and includes addi
 
 #### State Variables
 
-- `address public owner`: Stores the address of the contract owner.
+- `itemsAvail[] private redeemableItems` : Stores redeemable items with their names and costs.
+- `mapping(address => Item[]) private _inventory`: Maps addresses to their inventory of items.
+- `mapping(address => mapping(string => uint256)) private _itemIndex` : Maps addresses to their items with indices
+
 
 #### Constructor
 
 ```solidity
-constructor() ERC20("DegenToken", "DGN") {
-    owner = msg.sender;
+constructor() ERC20("Degen", "DGN") Ownable(msg.sender) {
+    redeemableItems.push(itemsAvail("1. DGNavatar", 100));
+    redeemableItems.push(itemsAvail("2. DGNtheme", 200));
+    redeemableItems.push(itemsAvail("3. DGN-Tshirt", 600));
+    redeemableItems.push(itemsAvail("4. mystery-box", 1200));
 }
 ```
 
-The constructor sets the contract deployer as the owner and initializes the token with a name ("DegenToken") and symbol ("DGN").
+The constructor sets the contract deployer as the owner and initializes the token with a name ("DegenToken") and symbol ("DGN"), and sets up the redeemable items list.
 
 #### Functions
 
@@ -42,27 +48,57 @@ function burn(uint256 amount) external {
 
 Allows any token holder to burn a specified amount of their tokens.
 
+##### getRedeemableItems
+
+```solidity
+function getRedeemableItems() external view returns (itemsAvail[] memory) {
+    return redeemableItems;
+}
+```
 ##### redeem
 
 ```solidity
 function redeem(string memory item) external {
     uint256 cost;
-    if (keccak256(bytes(item)) == keccak256("avatar")) {
+
+    if (keccak256(bytes(item)) == keccak256(bytes("DGNavatar")))
         cost = 100;
-    } else if (keccak256(bytes(item)) == keccak256("vehicle")) {
-        cost = 100;
-    } else if (keccak256(bytes(item)) == keccak256("mystery")) {
-        cost = 60;
-    } else {
+    else if (keccak256(bytes(item)) == keccak256(bytes("DGNtheme")))
+        cost = 200;
+    else if (keccak256(bytes(item)) == keccak256(bytes("DGN-Tshirt")))
+        cost = 600;
+    else if (keccak256(bytes(item)) == keccak256(bytes("mystery-box")))
+        cost = 1200;
+    else
         revert("Invalid item");
-    }
 
     require(balanceOf(msg.sender) >= cost, "Insufficient balance");
     _burn(msg.sender, cost);
+    _addItem(msg.sender, item);
 }
 ```
 
 Allows players to redeem tokens for specific items in the in-game store. Costs for items are predefined.
+
+
+
+##### addItem
+
+```solidity
+function _addItem(address user, string memory item) internal {
+    uint256 index = _itemIndex[user][item];
+    if (index == 0) {
+        _inventory[user].push(Item({name: item, quantity: 1}));
+        _itemIndex[user][item] = _inventory[user].length - 1;
+    } else {
+        _inventory[user][index].quantity += 1;
+    }
+}
+
+}
+```
+Internal function to add an item to a player's inventory.
+
 
 ##### transferTokens
 
@@ -74,104 +110,47 @@ function transferTokens(address to, uint256 amount) external {
 
 Allows token holders to transfer tokens to other addresses.
 
+##### getInventory
+
+```solidity
+function getInventory() external view returns (Item[] memory) {
+    return _inventory[msg.sender];
+}
+```
+Allows token holders to transfer tokens to other addresses.
+
+
 ### Deployment
 
 #### Prerequisites
 
 - Node.js (v14.x or later)
-- Hardhat (v2.8.x)
+- Remix
 - Avalanche network key (for deployment)
 
 #### Steps
 
-1. **Clone the Repository**:
-    ```bash
-    git clone https://github.com/your-username/degen-token-avalanche.git
-    cd degen-token-avalanche
-    ```
+1. **Access Remix IDE**:
+  Open Remix IDE in your web browser.
 
-2. **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+2. **Select Compiler Version**:
+   Ensure the compiler version is set to 0.8.20 or compatible with the contract.
 
-3. **Configure Hardhat**:
-    - Update `hardhat.config.js` with your Avalanche network key and network settings.
+3. **Deploy Contract:**:
+    - Navigate to the Deploy & Run Transactions tab in Remix.
+    - Select "Injected Provider - Metamask".
+    - Select DegenToken from the contract dropdown.
+    - Click on the Deploy button.
+    - Confirm the transaction in MetaMask (ensure you are connected to the SnowTrace Faucet Testnet).
 
-4. **Write and Compile Smart Contract**:
-    - Create or update `contracts/DegenToken.sol` with the `DegenToken` contract code.
-    - Ensure `DegenToken.sol` includes the necessary imports and functions as discussed.
-
-5. **Deploy Contract**:
-    - Write deployment scripts (e.g., `scripts/deploy.js`) using Hardhat to deploy `DegenToken` to the Avalanche network.
-    - Run the deployment script:
-      ```bash
-      npx hardhat run scripts/deploy.js --network fuji
-      ```
 
 ### Interacting with the Contract
 
-Once deployed, interact with the `DegenToken` contract using scripts:
+Once deployed, interact with the `DegenToken` contract using Remix's deployed box below the Deployed section.
 
-- **Mint Tokens** (`scripts/mint.js`):
-    ```javascript
-    async function mintTokens(contractAddress, recipient, amount) {
-        // Connect to deployed contract
-        const DegenToken = await ethers.getContractAt("DegenToken", contractAddress);
+### SnowTrace Faucet Testnet
 
-        // Mint tokens to recipient
-        await DegenToken.connect(owner).mint(recipient, amount);
-        console.log(`Minted ${amount} tokens to ${recipient}`);
-    }
-
-    // Replace placeholders with actual values
-    mintTokens(contractAddress, recipient, amount);
-    ```
-
-- **Burn Tokens** (`scripts/burn.js`):
-    ```javascript
-    async function burnTokens(contractAddress, amount) {
-        // Connect to deployed contract
-        const DegenToken = await ethers.getContractAt("DegenToken", contractAddress);
-
-        // Burn tokens from caller's balance
-        await DegenToken.connect(owner).burn(amount);
-        console.log(`Burned ${amount} tokens`);
-    }
-
-    // Replace placeholders with actual values
-    burnTokens(contractAddress, amount);
-    ```
-
-- **Redeem Tokens** (`scripts/redeem.js`):
-    ```javascript
-    async function redeemTokens(contractAddress, item) {
-        // Connect to deployed contract
-        const DegenToken = await ethers.getContractAt("DegenToken", contractAddress);
-
-        // Redeem tokens for specified item
-        await DegenToken.connect(owner).redeem(item);
-        console.log(`Redeemed ${item}`);
-    }
-
-    // Replace placeholders with actual values
-    redeemTokens(contractAddress, item);
-    ```
-
-- **Transfer Tokens** (`scripts/transfer.js`):
-    ```javascript
-    async function transferTokens(contractAddress, recipient, amount) {
-        // Connect to deployed contract
-        const DegenToken = await ethers.getContractAt("DegenToken", contractAddress);
-
-        // Transfer tokens to recipient
-        await DegenToken.connect(owner).transferTokens(recipient, amount);
-        console.log(`Transferred ${amount} tokens to ${recipient}`);
-    }
-
-    // Replace placeholders with actual values
-    transferTokens(contractAddress, recipient, amount);
-    ```
+After deployement, and interacting. Copy the address of the deployed contract and in Snowtrace.io testnet, search the copied address. There you will be able to verify the deploed interactions done by you (e.g. minting, redeeming, burning etc).
 
 ### License
 
@@ -179,7 +158,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Authors
 
-Sujal Mahajan
+Pratik Mishra
 
 ### Contributing
 
