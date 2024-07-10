@@ -49,13 +49,14 @@ function getRedeemableItems() external view returns (itemsAvail[] memory) {
 
         if (keccak256(bytes(item)) == keccak256(bytes("DGNavatar"))) 
             cost = 100;
-        else if (keccak256(bytes(item)) == keccak256(bytes("DGNtheme"))) 
+         else if (keccak256(bytes(item)) == keccak256(bytes("DGNtheme"))) 
             cost = 200;
         else if (keccak256(bytes(item)) == keccak256(bytes("DGN-Tshirt"))) 
             cost = 600;
         else if (keccak256(bytes(item)) == keccak256(bytes("mystery-box"))) 
             cost = 1200;
-        else
+
+            else
             revert("Invalid item");
 
         require(balanceOf(msg.sender) >= cost, "Insufficient balance");
@@ -76,4 +77,9 @@ function getRedeemableItems() external view returns (itemsAvail[] memory) {
     function getInventory() external view returns (Item[] memory) {
         return _inventory[msg.sender];
     }
+
+    function transferTokens(address to, uint256 amount) external {
+    require(balanceOf(msg.sender) >= amount, "Transfer amount exceeds balance");
+    _transfer(msg.sender, to, amount);
+}
 }
