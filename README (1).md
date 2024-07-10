@@ -124,7 +124,6 @@ Allows token holders to transfer tokens to other addresses.
 
 #### Prerequisites
 
-- Node.js (v14.x or later)
 - Remix
 - Avalanche network key (for deployment)
 
@@ -166,4 +165,4 @@ Contributions are welcome! Feel free to submit issues and pull requests.
 
 ---
 
-This README provides a detailed guide to understanding, deploying, and interacting with the `DegenToken` smart contract on the Avalanche blockchain using Hardhat and JavaScript scripts. 
+This README provides a detailed guide to understanding, deploying, and interacting with the `DegenToken` smart contract on the Avalanche blockchain using Remix. 
